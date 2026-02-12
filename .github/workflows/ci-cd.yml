@@ -10,36 +10,43 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
         run: |
           pip install pytest
-          pip install -r requirements.txt
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
       - name: Run tests
         run: pytest tests/ -v
       - name: Build artifact
         run: |
           mkdir -p dist
           cp -r app dist/
-          tar -czf dist/project.tar.gz dist/
-      - uses: actions/upload-artifact@v3
+          tar -czf project.tar.gz dist/
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: project-build
-          path: dist/project.tar.gz
+          path: project.tar.gz
+          retention-days: 5
   
   cd:
     runs-on: ubuntu-latest
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
-      - uses: actions/download-artifact@v3
+      - name: Download artifact
+        uses: actions/download-artifact@v4
         with:
           name: project-build
-      - run: |
+      - name: Extract and deploy
+        run: |
           tar -xzf project.tar.gz
           mkdir -p /tmp/staging
           cp -r * /tmp/staging/
-          echo "Deployed to /tmp/staging"
+          echo "✅ Deployed to /tmp/staging"
+          ls -la /tmp/staging/
